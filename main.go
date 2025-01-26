@@ -28,7 +28,6 @@ import (
 //go:embed assets
 var commonAssets embed.FS
 
-
 const (
 	screenWidth  = 800
 	screenHeight = 600
@@ -101,7 +100,6 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	emptyOp := ebiten.DrawImageOptions{}
 
 	scaleGeo := ebiten.GeoM{}
 	scaleGeo.Scale(4.2, 4.2)
@@ -110,23 +108,21 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	g.Background.Draw(screen, &opBackground)
 
-	//g.Statue.drawDebugRect = true
-	g.Statue.Draw(screen, &emptyOp)
+	g.Statue.Draw(screen, &ebiten.DrawImageOptions{})
 
-	//g.Cursor.drawDebugRect = true
 	posCursorX := g.x - float64(g.Cursor.img.Bounds().Dx())/2
 	posCursorY := g.y - float64(g.Cursor.img.Bounds().Dy())/2
 
 	g.Cursor.SetPosition(posCursorX, posCursorY)
 	if g.IsHovering {
 		g.CursorHover.SetPosition(posCursorX, posCursorY)
-		g.CursorHover.Draw(screen, &emptyOp)
+		g.CursorHover.Draw(screen, &ebiten.DrawImageOptions{})
 	} else {
-		g.Cursor.Draw(screen, &emptyOp)
+		g.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 	}
 
 	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t", g.IsHovering))
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", g.IsHovering, g.x, g.y))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -149,21 +145,21 @@ func checkErr(err error) {
 
 func main() {
 
-	Cursor_png, err := commonAssets.ReadFile("assets/cursor.png")
+	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
 	checkErr(err)
-	cursor := NewObjectFromSprite(Cursor_png, 0, 0)
+	cursor := NewObjectFromSprite(cursorAsset, 0, 0)
 
-	Cursor_hover_png, err := commonAssets.ReadFile("assets/cursorhover.png")
+	CursorHoverAsset, err := commonAssets.ReadFile("assets/cursorhover.png")
 	checkErr(err)
-	cursorHover := NewObjectFromSprite(Cursor_hover_png, 0, 0)
+	cursorHover := NewObjectFromSprite(CursorHoverAsset, 0, 0)
 
-	Apexstatue1_png, err := commonAssets.ReadFile("assets/apex/apexstatue1.png")
+	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
 	checkErr(err)
-	statue := NewObjectFromSprite(Apexstatue1_png, 100, 100)
+	statue := NewObjectFromSprite(ApexObjectAsset, 100, 100)
 
-	Biome_png, err := commonAssets.ReadFile("assets/apex/bg1.png")
+	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
 	checkErr(err)
-	background := NewObjectFromSprite(Biome_png, 0, 0)
+	background := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
 
 	g := &Game{x: 0.0, y: 0.0, Statue: statue, Cursor: cursor, CursorHover: cursorHover, Background: background}
 
