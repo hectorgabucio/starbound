@@ -39,12 +39,26 @@ type Stage interface {
 	Finished() bool
 }
 
+type CursorObject struct {
+	*Object
+	isHovering bool
+	imgNormal *ebiten.Image
+	imgHover  *ebiten.Image
+}
+
+func (c *CursorObject) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
+	img := c.imgNormal
+	if c.isHovering {
+		img = c.imgHover
+	}
+	c.img = img
+	c.Object.Draw(screen, options)
+}
+
 type apexStage struct {
 	Background  *Object
 	Object      *Object
-	IsHovering  bool
-	Cursor      *Object
-	CursorHover *Object
+	Cursor      *CursorObject
 	isFinished  bool
 }
 
@@ -59,9 +73,9 @@ func (s *apexStage) Update() error {
 	s.Cursor.x = float64(x)
 	s.Cursor.y = float64(y)
 
-	s.IsHovering = s.Object.HitBy(s.Cursor)
+	s.Cursor.isHovering = s.Object.HitBy(s.Cursor.Object)
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.IsHovering && !s.isFinished {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.Cursor.isHovering && !s.isFinished {
 		s.isFinished = true
 	}
 	return nil
@@ -85,15 +99,10 @@ func (s *apexStage) Draw(screen *ebiten.Image) {
 	posCursorY := s.Cursor.y - float64(s.Cursor.img.Bounds().Dy())/2
 
 	s.Cursor.SetPosition(posCursorX, posCursorY)
-	if s.IsHovering {
-		s.CursorHover.SetPosition(posCursorX, posCursorY)
-		s.CursorHover.Draw(screen, &ebiten.DrawImageOptions{})
-	} else {
-		s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
-	}
+	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 
 	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.IsHovering, posCursorX, posCursorY))
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.isHovering, posCursorX, posCursorY))
 }
 
 type Game struct {
@@ -153,6 +162,19 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
+func NewCursorObject(blobNormal, blobHover []byte) *CursorObject {
+	imgNormal, _, err := image.Decode(bytes.NewReader(blobNormal))
+	if err != nil {
+		log.Fatal(err)
+	}
+	imgHover, _, err := image.Decode(bytes.NewReader(blobHover))
+	if err != nil {
+		log.Fatal(err)
+	}
+	cursor := &CursorObject{Object: newObject(imgNormal, 0, 0), imgNormal: ebiten.NewImageFromImage(imgNormal), imgHover: ebiten.NewImageFromImage(imgHover)}
+	return cursor
+}
+
 func NewObjectFromSprite(blob []byte, x, y float64) *Object {
 	img, _, err := image.Decode(bytes.NewReader(blob))
 	if err != nil {
@@ -171,11 +193,9 @@ func main() {
 
 	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
 	checkErr(err)
-	cursor := NewObjectFromSprite(cursorAsset, 0, 0)
-
 	CursorHoverAsset, err := commonAssets.ReadFile("assets/cursorhover.png")
 	checkErr(err)
-	cursorHover := NewObjectFromSprite(CursorHoverAsset, 0, 0)
+	cursorObject := NewCursorObject(cursorAsset, CursorHoverAsset)
 
 	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
 	checkErr(err)
@@ -185,7 +205,7 @@ func main() {
 	checkErr(err)
 	background := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
 
-	apexStage := &apexStage{Background: background, Object: statue, Cursor: cursor, CursorHover: cursorHover}
+	apexStage := &apexStage{Background: background, Object: statue, Cursor: cursorObject}
 
 	g := &Game{ApexStage: apexStage, CurrentStage: apexStage}
 
