@@ -43,8 +43,6 @@ type apexStage struct {
 	Background  *Object
 	Object      *Object
 	IsHovering  bool
-	x           float64
-	y           float64
 	Cursor      *Object
 	CursorHover *Object
 	isFinished  bool
@@ -58,8 +56,8 @@ func (s *apexStage) Update() error {
 	if x >= screenWidth || y >= screenHeight {
 		return nil
 	}
-	s.x = float64(x)
-	s.y = float64(y)
+	s.Cursor.x = float64(x)
+	s.Cursor.y = float64(y)
 
 	s.IsHovering = s.Object.HitBy(s.Cursor)
 
@@ -83,8 +81,8 @@ func (s *apexStage) Draw(screen *ebiten.Image) {
 
 	s.Object.Draw(screen, &ebiten.DrawImageOptions{})
 
-	posCursorX := s.x - float64(s.Cursor.img.Bounds().Dx())/2
-	posCursorY := s.y - float64(s.Cursor.img.Bounds().Dy())/2
+	posCursorX := s.Cursor.x - float64(s.Cursor.img.Bounds().Dx())/2
+	posCursorY := s.Cursor.y - float64(s.Cursor.img.Bounds().Dy())/2
 
 	s.Cursor.SetPosition(posCursorX, posCursorY)
 	if s.IsHovering {
@@ -95,7 +93,7 @@ func (s *apexStage) Draw(screen *ebiten.Image) {
 	}
 
 	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.IsHovering, s.x, s.y))
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.IsHovering, posCursorX, posCursorY))
 }
 
 type Game struct {
