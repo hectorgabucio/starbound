@@ -33,14 +33,74 @@ const (
 	screenHeight = 600
 )
 
-type Game struct {
+type Stage interface {
+	Update() error
+	Draw(screen *ebiten.Image)
+	Finished() bool
+}
+
+type apexStage struct {
+	Background  *Object
+	Object      *Object
+	IsHovering  bool
 	x           float64
 	y           float64
 	Cursor      *Object
 	CursorHover *Object
-	Statue      *Object
-	IsHovering  bool
-	Background  *Object
+	isFinished  bool
+}
+
+func (s *apexStage) Update() error {
+	x, y := ebiten.CursorPosition()
+	if x < 0 || y < 0 {
+		return nil
+	}
+	if x >= screenWidth || y >= screenHeight {
+		return nil
+	}
+	s.x = float64(x)
+	s.y = float64(y)
+
+	s.IsHovering = s.Object.HitBy(s.Cursor)
+
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.IsHovering && !s.isFinished {
+		s.isFinished = true
+	}
+	return nil
+}
+
+func (s *apexStage) Finished() bool {
+	return false
+}
+
+func (s *apexStage) Draw(screen *ebiten.Image) {
+	scaleGeo := ebiten.GeoM{}
+	scaleGeo.Scale(4.2, 4.2)
+	opBackground := ebiten.DrawImageOptions{
+		GeoM: scaleGeo,
+	}
+	s.Background.Draw(screen, &opBackground)
+
+	s.Object.Draw(screen, &ebiten.DrawImageOptions{})
+
+	posCursorX := s.x - float64(s.Cursor.img.Bounds().Dx())/2
+	posCursorY := s.y - float64(s.Cursor.img.Bounds().Dy())/2
+
+	s.Cursor.SetPosition(posCursorX, posCursorY)
+	if s.IsHovering {
+		s.CursorHover.SetPosition(posCursorX, posCursorY)
+		s.CursorHover.Draw(screen, &ebiten.DrawImageOptions{})
+	} else {
+		s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
+	}
+
+	ebitenutil.DebugPrint(screen,
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.IsHovering, s.x, s.y))
+}
+
+type Game struct {
+	CurrentStage Stage
+	ApexStage Stage
 }
 
 type Object struct {
@@ -84,45 +144,11 @@ func (o *Object) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 }
 
 func (g *Game) Update() error {
-	x, y := ebiten.CursorPosition()
-	if x < 0 || y < 0 {
-		return nil
-	}
-	if x >= screenWidth || y >= screenHeight {
-		return nil
-	}
-	g.x = float64(x)
-	g.y = float64(y)
-
-	g.IsHovering = g.Statue.HitBy(g.Cursor)
-
-	return nil
+	return g.ApexStage.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-
-	scaleGeo := ebiten.GeoM{}
-	scaleGeo.Scale(4.2, 4.2)
-	opBackground := ebiten.DrawImageOptions{
-		GeoM: scaleGeo,
-	}
-	g.Background.Draw(screen, &opBackground)
-
-	g.Statue.Draw(screen, &ebiten.DrawImageOptions{})
-
-	posCursorX := g.x - float64(g.Cursor.img.Bounds().Dx())/2
-	posCursorY := g.y - float64(g.Cursor.img.Bounds().Dy())/2
-
-	g.Cursor.SetPosition(posCursorX, posCursorY)
-	if g.IsHovering {
-		g.CursorHover.SetPosition(posCursorX, posCursorY)
-		g.CursorHover.Draw(screen, &ebiten.DrawImageOptions{})
-	} else {
-		g.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
-	}
-
-	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", g.IsHovering, g.x, g.y))
+	g.ApexStage.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -161,7 +187,9 @@ func main() {
 	checkErr(err)
 	background := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
 
-	g := &Game{x: 0.0, y: 0.0, Statue: statue, Cursor: cursor, CursorHover: cursorHover, Background: background}
+	apexStage := &apexStage{Background: background, Object: statue, Cursor: cursor, CursorHover: cursorHover}
+
+	g := &Game{ApexStage: apexStage, CurrentStage: apexStage}
 
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
