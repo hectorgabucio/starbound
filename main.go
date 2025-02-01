@@ -42,8 +42,8 @@ type Stage interface {
 type CursorObject struct {
 	*Object
 	isHovering bool
-	imgNormal *ebiten.Image
-	imgHover  *ebiten.Image
+	imgNormal  *ebiten.Image
+	imgHover   *ebiten.Image
 }
 
 func (c *CursorObject) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
@@ -55,14 +55,14 @@ func (c *CursorObject) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptio
 	c.Object.Draw(screen, options)
 }
 
-type apexStage struct {
-	Background  *Object
-	Object      *Object
-	Cursor      *CursorObject
-	isFinished  bool
+type playStage struct {
+	Background *Object
+	Object     *Object
+	Cursor     *CursorObject
+	isFinished bool
 }
 
-func (s *apexStage) Update() error {
+func (s *playStage) Update() error {
 	x, y := ebiten.CursorPosition()
 	if x < 0 || y < 0 {
 		return nil
@@ -81,11 +81,11 @@ func (s *apexStage) Update() error {
 	return nil
 }
 
-func (s *apexStage) Finished() bool {
+func (s *playStage) Finished() bool {
 	return false
 }
 
-func (s *apexStage) Draw(screen *ebiten.Image) {
+func (s *playStage) Draw(screen *ebiten.Image) {
 	scaleGeo := ebiten.GeoM{}
 	scaleGeo.Scale(4.2, 4.2)
 	opBackground := ebiten.DrawImageOptions{
@@ -107,7 +107,7 @@ func (s *apexStage) Draw(screen *ebiten.Image) {
 
 type Game struct {
 	CurrentStage Stage
-	ApexStage Stage
+	ApexStage    Stage
 }
 
 type Object struct {
@@ -189,6 +189,18 @@ func checkErr(err error) {
 	}
 }
 
+func NewApexPlayStage(cursorObject *CursorObject) Stage {
+	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
+	checkErr(err)
+	apexStatue := NewObjectFromSprite(ApexObjectAsset, 100, 100)
+
+	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
+	checkErr(err)
+	apexBg := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
+
+	return &playStage{Background: apexBg, Object: apexStatue, Cursor: cursorObject}
+}
+
 func main() {
 
 	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
@@ -196,16 +208,8 @@ func main() {
 	CursorHoverAsset, err := commonAssets.ReadFile("assets/cursorhover.png")
 	checkErr(err)
 	cursorObject := NewCursorObject(cursorAsset, CursorHoverAsset)
+	apexStage := NewApexPlayStage(cursorObject)
 
-	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
-	checkErr(err)
-	statue := NewObjectFromSprite(ApexObjectAsset, 100, 100)
-
-	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
-	checkErr(err)
-	background := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
-
-	apexStage := &apexStage{Background: background, Object: statue, Cursor: cursorObject}
 
 	g := &Game{ApexStage: apexStage, CurrentStage: apexStage}
 
