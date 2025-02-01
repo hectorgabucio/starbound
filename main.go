@@ -119,9 +119,8 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 }
 
 type Game struct {
-	CurrentStage Stage
-	ApexStage    Stage
-	FlorianStage Stage
+	currentStageIdx int
+	playStages 	[]Stage
 }
 
 type Object struct {
@@ -165,14 +164,16 @@ func (o *Object) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 }
 
 func (g *Game) Update() error {
-	if g.CurrentStage.Finished() {
-		g.CurrentStage = g.FlorianStage
+	currentStage := g.playStages[g.currentStageIdx]
+	if currentStage.Finished() {
+		g.currentStageIdx++
+		return nil
 	}
-	return g.CurrentStage.Update()
+	return currentStage.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.CurrentStage.Draw(screen)
+	g.playStages[g.currentStageIdx].Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -240,7 +241,9 @@ func main() {
 	apexStage := NewApexPlayStage(cursorObject)
 	florianStage := NewFlorianPlayStage(cursorObject)
 
-	g := &Game{ApexStage: apexStage, CurrentStage: apexStage, FlorianStage: florianStage}
+	playStages := []Stage{apexStage, florianStage}
+
+	g := &Game{playStages: playStages, currentStageIdx: 0}
 
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
