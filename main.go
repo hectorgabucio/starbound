@@ -34,6 +34,7 @@ const (
 )
 
 type Stage interface {
+	GetID() string
 	Update() error
 	Draw(screen *ebiten.Image)
 	Finished() bool
@@ -56,13 +57,22 @@ func (c *CursorObject) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptio
 }
 
 type playStage struct {
+	ID         string
 	Background *Object
 	Object     *Object
 	Cursor     *CursorObject
 	isFinished bool
 }
 
+func (s *playStage) GetID() string {
+	return s.ID
+}
+
 func (s *playStage) Update() error {
+	if s.Finished() {
+		return nil
+	}
+
 	x, y := ebiten.CursorPosition()
 	if x < 0 || y < 0 {
 		return nil
@@ -75,17 +85,20 @@ func (s *playStage) Update() error {
 
 	s.Cursor.isHovering = s.Object.HitBy(s.Cursor.Object)
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.Cursor.isHovering && !s.isFinished {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.Cursor.isHovering && !s.Finished() {
 		s.isFinished = true
 	}
 	return nil
 }
 
 func (s *playStage) Finished() bool {
-	return false
+	return s.isFinished
 }
 
 func (s *playStage) Draw(screen *ebiten.Image) {
+	if s.Finished() {
+		return
+	}
 	scaleGeo := ebiten.GeoM{}
 	scaleGeo.Scale(4.2, 4.2)
 	opBackground := ebiten.DrawImageOptions{
@@ -108,6 +121,7 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 type Game struct {
 	CurrentStage Stage
 	ApexStage    Stage
+	FlorianStage Stage
 }
 
 type Object struct {
@@ -151,11 +165,14 @@ func (o *Object) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
 }
 
 func (g *Game) Update() error {
-	return g.ApexStage.Update()
+	if g.CurrentStage.Finished() {
+		g.CurrentStage = g.FlorianStage
+	}
+	return g.CurrentStage.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.ApexStage.Draw(screen)
+	g.CurrentStage.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -198,7 +215,19 @@ func NewApexPlayStage(cursorObject *CursorObject) Stage {
 	checkErr(err)
 	apexBg := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
 
-	return &playStage{Background: apexBg, Object: apexStatue, Cursor: cursorObject}
+	return &playStage{ID: "apex", Background: apexBg, Object: apexStatue, Cursor: cursorObject}
+}
+
+func NewFlorianPlayStage(cursorObject *CursorObject) Stage {
+	FlorianObjectAsset, err := commonAssets.ReadFile("assets/florian/object.png")
+	checkErr(err)
+	florianObject := NewObjectFromSprite(FlorianObjectAsset, 200, 200)
+
+	FlorianBackgroundAsset, err := commonAssets.ReadFile("assets/florian/bg.png")
+	checkErr(err)
+	florianBg := NewObjectFromSprite(FlorianBackgroundAsset, 0, 0)
+
+	return &playStage{ID: "florian", Background: florianBg, Object: florianObject, Cursor: cursorObject}
 }
 
 func main() {
@@ -209,9 +238,9 @@ func main() {
 	checkErr(err)
 	cursorObject := NewCursorObject(cursorAsset, CursorHoverAsset)
 	apexStage := NewApexPlayStage(cursorObject)
+	florianStage := NewFlorianPlayStage(cursorObject)
 
-
-	g := &Game{ApexStage: apexStage, CurrentStage: apexStage}
+	g := &Game{ApexStage: apexStage, CurrentStage: apexStage, FlorianStage: florianStage}
 
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
