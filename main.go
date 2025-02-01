@@ -1,25 +1,10 @@
-// Copyright 2018 The Ebiten Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
-	"bytes"
 	"embed"
 	"fmt"
-	"image"
 	"log"
+	"starbound-story/internal/object"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -33,6 +18,52 @@ const (
 	screenHeight = 600
 )
 
+func main() {
+
+	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
+	checkErr(err)
+	CursorHoverAsset, err := commonAssets.ReadFile("assets/cursorhover.png")
+	checkErr(err)
+	cursorObject := object.NewCursorObject(cursorAsset, CursorHoverAsset)
+	apexStage := NewApexPlayStage(cursorObject)
+	florianStage := NewFlorianPlayStage(cursorObject)
+
+	playStages := []Stage{apexStage, florianStage}
+
+	g := &Game{playStages: playStages, currentStageIdx: 0}
+
+	ebiten.SetVsyncEnabled(true)
+	ebiten.SetWindowSize(screenWidth, screenHeight)
+	ebiten.SetWindowTitle("Starbound Storyline experience")
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+
+	if err := ebiten.RunGame(g); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type Game struct {
+	currentStageIdx int
+	playStages      []Stage
+}
+
+func (g *Game) Update() error {
+	currentStage := g.playStages[g.currentStageIdx]
+	if currentStage.Finished() {
+		g.currentStageIdx++
+		return nil
+	}
+	return currentStage.Update()
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.playStages[g.currentStageIdx].Draw(screen)
+}
+
+func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+	return screenWidth, screenHeight
+}
+
 type Stage interface {
 	GetID() string
 	Update() error
@@ -40,29 +71,38 @@ type Stage interface {
 	Finished() bool
 }
 
-type CursorObject struct {
-	*Object
-	isHovering bool
-	imgNormal  *ebiten.Image
-	imgHover   *ebiten.Image
-}
-
-func (c *CursorObject) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	img := c.imgNormal
-	if c.isHovering {
-		img = c.imgHover
-	}
-	c.img = img
-	c.Object.Draw(screen, options)
-}
-
 type playStage struct {
 	ID         string
-	Background *Object
-	Object     *Object
-	Cursor     *CursorObject
+	Background *object.Object
+	Object     *object.Object
+	Cursor     *object.CursorObject
 	isFinished bool
 }
+
+func NewApexPlayStage(cursorObject *object.CursorObject) Stage {
+	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
+	checkErr(err)
+	apexStatue := object.NewObjectFromSprite(ApexObjectAsset, 100, 100)
+
+	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
+	checkErr(err)
+	apexBg := object.NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
+
+	return &playStage{ID: "apex", Background: apexBg, Object: apexStatue, Cursor: cursorObject}
+}
+
+func NewFlorianPlayStage(cursorObject *object.CursorObject) Stage {
+	FlorianObjectAsset, err := commonAssets.ReadFile("assets/florian/object.png")
+	checkErr(err)
+	florianObject := object.NewObjectFromSprite(FlorianObjectAsset, 200, 200)
+
+	FlorianBackgroundAsset, err := commonAssets.ReadFile("assets/florian/bg.png")
+	checkErr(err)
+	florianBg := object.NewObjectFromSprite(FlorianBackgroundAsset, 0, 0)
+
+	return &playStage{ID: "florian", Background: florianBg, Object: florianObject, Cursor: cursorObject}
+}
+
 
 func (s *playStage) GetID() string {
 	return s.ID
@@ -80,12 +120,12 @@ func (s *playStage) Update() error {
 	if x >= screenWidth || y >= screenHeight {
 		return nil
 	}
-	s.Cursor.x = float64(x)
-	s.Cursor.y = float64(y)
+	s.Cursor.X = float64(x)
+	s.Cursor.Y = float64(y)
 
-	s.Cursor.isHovering = s.Object.HitBy(s.Cursor.Object)
+	s.Cursor.IsHovering = s.Object.HitBy(s.Cursor.Object)
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.Cursor.isHovering && !s.Finished() {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.Cursor.IsHovering && !s.Finished() {
 		s.isFinished = true
 	}
 	return nil
@@ -108,149 +148,19 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 
 	s.Object.Draw(screen, &ebiten.DrawImageOptions{})
 
-	posCursorX := s.Cursor.x - float64(s.Cursor.img.Bounds().Dx())/2
-	posCursorY := s.Cursor.y - float64(s.Cursor.img.Bounds().Dy())/2
+	posCursorX := s.Cursor.X - float64(s.Cursor.Img.Bounds().Dx())/2
+	posCursorY := s.Cursor.Y - float64(s.Cursor.Img.Bounds().Dy())/2
 
 	s.Cursor.SetPosition(posCursorX, posCursorY)
 	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 
 	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.isHovering, posCursorX, posCursorY))
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, posCursorX, posCursorY))
 }
 
-type Game struct {
-	currentStageIdx int
-	playStages 	[]Stage
-}
-
-type Object struct {
-	x, y          float64
-	img           *ebiten.Image
-	drawDebugRect bool
-}
-
-func newObject(img image.Image, x, y float64) *Object {
-	return &Object{
-		x:   x,
-		y:   y,
-		img: ebiten.NewImageFromImage(img),
-	}
-}
-
-func (o *Object) Position() (float64, float64) {
-	return o.x, o.y
-}
-
-func (o *Object) SetPosition(x, y float64) {
-	o.x = x
-	o.y = y
-}
-
-func (o *Object) HitBy(other *Object) bool {
-	rect := image.Rect(int(o.x), int(o.y), int(o.x)+o.img.Bounds().Dx(), int(o.y)+o.img.Bounds().Dy())
-	otherRect := image.Rect(int(other.x), int(other.y), int(other.x)+other.img.Bounds().Dx(), int(other.y)+other.img.Bounds().Dy())
-	return rect.Overlaps(otherRect)
-}
-
-func (o *Object) Draw(screen *ebiten.Image, options *ebiten.DrawImageOptions) {
-	options.GeoM.Translate(o.x, o.y)
-	//options.GeoM.Scale(4.2, 4.2)
-
-	screen.DrawImage(o.img, options)
-
-	if o.drawDebugRect {
-		ebitenutil.DrawRect(screen, o.x, o.y, float64(o.img.Bounds().Dx()), float64(o.img.Bounds().Dy()), image.White)
-	}
-}
-
-func (g *Game) Update() error {
-	currentStage := g.playStages[g.currentStageIdx]
-	if currentStage.Finished() {
-		g.currentStageIdx++
-		return nil
-	}
-	return currentStage.Update()
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-	g.playStages[g.currentStageIdx].Draw(screen)
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return screenWidth, screenHeight
-}
-
-func NewCursorObject(blobNormal, blobHover []byte) *CursorObject {
-	imgNormal, _, err := image.Decode(bytes.NewReader(blobNormal))
-	if err != nil {
-		log.Fatal(err)
-	}
-	imgHover, _, err := image.Decode(bytes.NewReader(blobHover))
-	if err != nil {
-		log.Fatal(err)
-	}
-	cursor := &CursorObject{Object: newObject(imgNormal, 0, 0), imgNormal: ebiten.NewImageFromImage(imgNormal), imgHover: ebiten.NewImageFromImage(imgHover)}
-	return cursor
-}
-
-func NewObjectFromSprite(blob []byte, x, y float64) *Object {
-	img, _, err := image.Decode(bytes.NewReader(blob))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return newObject(img, x, y)
-}
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func NewApexPlayStage(cursorObject *CursorObject) Stage {
-	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
-	checkErr(err)
-	apexStatue := NewObjectFromSprite(ApexObjectAsset, 100, 100)
-
-	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
-	checkErr(err)
-	apexBg := NewObjectFromSprite(ApexBackgroundAsset, 0, 0)
-
-	return &playStage{ID: "apex", Background: apexBg, Object: apexStatue, Cursor: cursorObject}
-}
-
-func NewFlorianPlayStage(cursorObject *CursorObject) Stage {
-	FlorianObjectAsset, err := commonAssets.ReadFile("assets/florian/object.png")
-	checkErr(err)
-	florianObject := NewObjectFromSprite(FlorianObjectAsset, 200, 200)
-
-	FlorianBackgroundAsset, err := commonAssets.ReadFile("assets/florian/bg.png")
-	checkErr(err)
-	florianBg := NewObjectFromSprite(FlorianBackgroundAsset, 0, 0)
-
-	return &playStage{ID: "florian", Background: florianBg, Object: florianObject, Cursor: cursorObject}
-}
-
-func main() {
-
-	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
-	checkErr(err)
-	CursorHoverAsset, err := commonAssets.ReadFile("assets/cursorhover.png")
-	checkErr(err)
-	cursorObject := NewCursorObject(cursorAsset, CursorHoverAsset)
-	apexStage := NewApexPlayStage(cursorObject)
-	florianStage := NewFlorianPlayStage(cursorObject)
-
-	playStages := []Stage{apexStage, florianStage}
-
-	g := &Game{playStages: playStages, currentStageIdx: 0}
-
-	ebiten.SetVsyncEnabled(true)
-	ebiten.SetWindowSize(screenWidth, screenHeight)
-	ebiten.SetWindowTitle("Starbound Storyline experience")
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-
-	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
 }
