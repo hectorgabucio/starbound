@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"log"
 	"starbound-story/internal/object"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
@@ -22,7 +25,22 @@ const (
 	screenHeight = 600
 )
 
+func initOGGPlayer(ctx *audio.Context, path string) *audio.Player {
+	audioSrc, err := commonAssets.ReadFile(path)
+	checkErr(err)
+	s, err := vorbis.DecodeF32(bytes.NewReader(audioSrc))
+	checkErr(err)
+
+	p, err := ctx.NewPlayerF32(s)
+	checkErr(err)
+	return p
+}
+
 func main() {
+
+	audioContext := audio.NewContext(44100)
+	hornPlayer := initOGGPlayer(audioContext, "assets/horn.ogg")
+	questFinishedPlayer := initOGGPlayer(audioContext, "assets/quest_finished.ogg")
 
 	cursorAsset, err := commonAssets.ReadFile("assets/cursor.png")
 	checkErr(err)
@@ -34,7 +52,7 @@ func main() {
 
 	playStages := []Stage{apexStage, florianStage}
 
-	g := &Game{playStages: playStages, currentStageIdx: 0}
+	g := &Game{playStages: playStages, currentStageIdx: 0, hornPlayer: hornPlayer, questFinishedPlayer: questFinishedPlayer}
 
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
@@ -47,13 +65,18 @@ func main() {
 }
 
 type Game struct {
-	currentStageIdx int
-	playStages      []Stage
+	currentStageIdx     int
+	playStages          []Stage
+	hornPlayer          *audio.Player
+	questFinishedPlayer *audio.Player
 }
 
 func (g *Game) Update() error {
 	currentStage := g.playStages[g.currentStageIdx]
 	if currentStage.Finished() {
+		g.questFinishedPlayer.Rewind()
+		g.questFinishedPlayer.Play()
+
 		g.currentStageIdx++
 		return nil
 	}
@@ -106,7 +129,6 @@ func NewFlorianPlayStage(cursorObject *object.CursorObject) Stage {
 
 	return &playStage{ID: "florian", Background: florianBg, Object: florianObject, Cursor: cursorObject}
 }
-
 
 func (s *playStage) GetID() string {
 	return s.ID
@@ -161,7 +183,6 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen,
 		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, posCursorX, posCursorY))
 }
-
 
 func checkErr(err error) {
 	if err != nil {
