@@ -10,6 +10,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+// cool sounds
+// character_joined.ogg
+// cygnus-x1.ogg
+
 //go:embed assets
 var commonAssets embed.FS
 
