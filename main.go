@@ -50,9 +50,14 @@ func main() {
 	apexStage := NewApexPlayStage(cursorObject)
 	florianStage := NewFlorianPlayStage(cursorObject)
 
-	playStages := []Stage{apexStage, florianStage}
+	cursorEndAsset, err := commonAssets.ReadFile("assets/end/reward_bag.png")
+	checkErr(err)
+	cursorEndObject := object.NewCursorObject(cursorEndAsset, cursorEndAsset)
+	endStage := NewEndStage(cursorEndObject, hornPlayer)
 
-	g := &Game{playStages: playStages, currentStageIdx: 0, hornPlayer: hornPlayer, questFinishedPlayer: questFinishedPlayer}
+	playStages := []Stage{apexStage, florianStage, endStage}
+
+	g := &Game{playStages: playStages, currentStageIdx: 0, questFinishedPlayer: questFinishedPlayer}
 
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowSize(screenWidth, screenHeight)
@@ -67,7 +72,6 @@ func main() {
 type Game struct {
 	currentStageIdx     int
 	playStages          []Stage
-	hornPlayer          *audio.Player
 	questFinishedPlayer *audio.Player
 }
 
@@ -182,6 +186,55 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 
 	ebitenutil.DebugPrint(screen,
 		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, posCursorX, posCursorY))
+}
+
+type endStage struct {
+	ID         string
+	Background *object.Object
+	Cursor     *object.CursorObject
+	hornPlayer *audio.Player
+}
+
+func NewEndStage(cursorObject *object.CursorObject, hornPlayer *audio.Player) Stage {
+	EndBackgroundAsset, err := commonAssets.ReadFile("assets/end/bg.png")
+	checkErr(err)
+	endBg := object.NewObjectFromSprite(EndBackgroundAsset, 0, 0)
+	return &endStage{ID: "end", Background: endBg, Cursor: cursorObject, hornPlayer: hornPlayer}
+}
+
+func (s *endStage) GetID() string {
+	return s.ID
+}
+
+func (s *endStage) Update() error {
+
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		s.hornPlayer.Rewind()
+		s.hornPlayer.Play()
+	}
+
+	x, y := ebiten.CursorPosition()
+	s.Cursor.X = float64(x)
+	s.Cursor.Y = float64(y)
+
+	return nil
+}
+
+func (s *endStage) Finished() bool {
+	return false
+}
+
+func (s *endStage) Draw(screen *ebiten.Image) {
+	opBackground := ebiten.DrawImageOptions{}
+	s.Background.Draw(screen, &opBackground)
+
+	posCursorX := s.Cursor.X - float64(s.Cursor.Img.Bounds().Dx())/2
+	posCursorY := s.Cursor.Y - float64(s.Cursor.Img.Bounds().Dy())/2
+
+	s.Cursor.SetPosition(posCursorX, posCursorY)
+	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
+
+	ebitenutil.DebugPrintAt(screen, "Made with <3 by Héctor Gabucio", 310, 500)
 }
 
 func checkErr(err error) {
