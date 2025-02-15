@@ -189,6 +189,8 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 }
 
 type endStage struct {
+	coolDownHorn int
+	currentCoolDownHorn int
 	ID         string
 	Background *object.Object
 	Cursor     *object.CursorObject
@@ -199,7 +201,7 @@ func NewEndStage(cursorObject *object.CursorObject, hornPlayer *audio.Player) St
 	EndBackgroundAsset, err := commonAssets.ReadFile("assets/end/bg.png")
 	checkErr(err)
 	endBg := object.NewObjectFromSprite(EndBackgroundAsset, 0, 0)
-	return &endStage{ID: "end", Background: endBg, Cursor: cursorObject, hornPlayer: hornPlayer}
+	return &endStage{ID: "end", Background: endBg, Cursor: cursorObject, hornPlayer: hornPlayer, coolDownHorn: 50, currentCoolDownHorn: 100}
 }
 
 func (s *endStage) GetID() string {
@@ -207,10 +209,12 @@ func (s *endStage) GetID() string {
 }
 
 func (s *endStage) Update() error {
+	s.currentCoolDownHorn--
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.currentCoolDownHorn <= 0 {
 		s.hornPlayer.Rewind()
 		s.hornPlayer.Play()
+		s.currentCoolDownHorn = s.coolDownHorn
 	}
 
 	x, y := ebiten.CursorPosition()
