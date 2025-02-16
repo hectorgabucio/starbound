@@ -22,7 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-
+      - name: Build static files
+        id: build
+        run: |
+          echo "Building static files"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
