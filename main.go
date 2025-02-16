@@ -189,12 +189,12 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 }
 
 type endStage struct {
-	coolDownHorn int
+	coolDownHorn        int
 	currentCoolDownHorn int
-	ID         string
-	Background *object.Object
-	Cursor     *object.CursorObject
-	hornPlayer *audio.Player
+	ID                  string
+	Background          *object.Object
+	Cursor              *object.CursorObject
+	hornPlayer          *audio.Player
 }
 
 func NewEndStage(cursorObject *object.CursorObject, hornPlayer *audio.Player) Stage {
@@ -232,13 +232,13 @@ func (s *endStage) Draw(screen *ebiten.Image) {
 	opBackground := ebiten.DrawImageOptions{}
 	s.Background.Draw(screen, &opBackground)
 
+	ebitenutil.DebugPrintAt(screen, "Made with <3 by Héctor Gabucio", 310, 500)
+
 	posCursorX := s.Cursor.X - float64(s.Cursor.Img.Bounds().Dx())/2
 	posCursorY := s.Cursor.Y - float64(s.Cursor.Img.Bounds().Dy())/2
 
 	s.Cursor.SetPosition(posCursorX, posCursorY)
 	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
-
-	ebitenutil.DebugPrintAt(screen, "Made with <3 by Héctor Gabucio", 310, 500)
 }
 
 func checkErr(err error) {
