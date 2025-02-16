@@ -27,7 +27,7 @@ jobs:
         run: |
           echo "Building static files"
           make site-compile
-          cp $(go env GOROOT)/misc/wasm/wasm_exec.js .
+          cp $(go env GOROOT)/misc/wasm/wasm_exec.js ./site
 
 
       - name: Setup Pages
