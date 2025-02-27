@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"log"
 	"starbound-story/internal/object"
 
@@ -113,7 +112,7 @@ type playStage struct {
 func NewApexPlayStage(cursorObject *object.CursorObject) Stage {
 	ApexObjectAsset, err := commonAssets.ReadFile("assets/apex/object.png")
 	checkErr(err)
-	apexStatue := object.NewObjectFromSprite(ApexObjectAsset, 100, 100)
+	apexStatue := object.NewObjectFromSprite(ApexObjectAsset, 100, 468)
 
 	ApexBackgroundAsset, err := commonAssets.ReadFile("assets/apex/bg.png")
 	checkErr(err)
@@ -125,7 +124,7 @@ func NewApexPlayStage(cursorObject *object.CursorObject) Stage {
 func NewFlorianPlayStage(cursorObject *object.CursorObject) Stage {
 	FlorianObjectAsset, err := commonAssets.ReadFile("assets/florian/object.png")
 	checkErr(err)
-	florianObject := object.NewObjectFromSprite(FlorianObjectAsset, 200, 200)
+	florianObject := object.NewObjectFromSprite(FlorianObjectAsset, 707, 385)
 
 	FlorianBackgroundAsset, err := commonAssets.ReadFile("assets/florian/bg.png")
 	checkErr(err)
@@ -183,8 +182,6 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 
 	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 
-	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, s.Cursor.X, s.Cursor.Y))
 }
 
 type endStage struct {
