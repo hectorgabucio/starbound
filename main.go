@@ -150,8 +150,11 @@ func (s *playStage) Update() error {
 	if x >= screenWidth || y >= screenHeight {
 		return nil
 	}
-	s.Cursor.X = float64(x)
-	s.Cursor.Y = float64(y)
+
+	posCursorX := float64(x) - float64(s.Cursor.Img.Bounds().Dx())/2
+	posCursorY := float64(y) - float64(s.Cursor.Img.Bounds().Dy())/2
+
+	s.Cursor.SetPosition(posCursorX, posCursorY)
 
 	s.Cursor.IsHovering = s.Object.HitBy(s.Cursor.Object)
 
@@ -178,14 +181,10 @@ func (s *playStage) Draw(screen *ebiten.Image) {
 
 	s.Object.Draw(screen, &ebiten.DrawImageOptions{})
 
-	posCursorX := s.Cursor.X - float64(s.Cursor.Img.Bounds().Dx())/2
-	posCursorY := s.Cursor.Y - float64(s.Cursor.Img.Bounds().Dy())/2
-
-	s.Cursor.SetPosition(posCursorX, posCursorY)
 	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 
 	ebitenutil.DebugPrint(screen,
-		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, posCursorX, posCursorY))
+		fmt.Sprintf("DEBUG MESSAGES: %t, %d, %d", s.Cursor.IsHovering, s.Cursor.X, s.Cursor.Y))
 }
 
 type endStage struct {
@@ -218,8 +217,11 @@ func (s *endStage) Update() error {
 	}
 
 	x, y := ebiten.CursorPosition()
-	s.Cursor.X = float64(x)
-	s.Cursor.Y = float64(y)
+
+	posCursorX := float64(x) - float64(s.Cursor.Img.Bounds().Dx())/2
+	posCursorY := float64(y) - float64(s.Cursor.Img.Bounds().Dy())/2
+
+	s.Cursor.SetPosition(posCursorX, posCursorY)
 
 	return nil
 }
@@ -234,10 +236,6 @@ func (s *endStage) Draw(screen *ebiten.Image) {
 
 	ebitenutil.DebugPrintAt(screen, "Made with <3 by Héctor Gabucio", 310, 500)
 
-	posCursorX := s.Cursor.X - float64(s.Cursor.Img.Bounds().Dx())/2
-	posCursorY := s.Cursor.Y - float64(s.Cursor.Img.Bounds().Dy())/2
-
-	s.Cursor.SetPosition(posCursorX, posCursorY)
 	s.Cursor.Draw(screen, &ebiten.DrawImageOptions{})
 }
 
